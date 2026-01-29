@@ -9,3 +9,8 @@ export type FormState = {
   errors?: z.ZodFlattenedError<z.infer<typeof LoginFormSchema>>;
   message?: string;
 };
+
+export type SessionPayload = {
+  username: string;
+  expiresAt: Date;
+};

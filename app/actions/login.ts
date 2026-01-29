@@ -1,8 +1,9 @@
 import z from 'zod';
 
-import { LocalAPI } from '../lib/api';
-import { FormState, LoginFormSchema } from '../lib/definitions';
 import { redirect } from 'next/navigation';
+
+import { LocalAPI } from '../lib/client/api';
+import { FormState, LoginFormSchema } from '../lib/client/definitions';
 
 export async function login(
   state: FormState,
@@ -20,8 +21,8 @@ export async function login(
   const response = await LocalAPI.post({
     path: '/api/login',
     body: JSON.stringify({
-      username: formData.get('username'),
-      password: formData.get('password'),
+      username: validateFields.data.username,
+      password: validateFields.data.password,
     }),
   });
 
