@@ -7,11 +7,11 @@ import { Lock, Person, Visibility, VisibilityOff } from '@mui/icons-material';
 import { Box, Button, FormGroup, FormLabel, IconButton, InputAdornment, TextField, Typography } from '@mui/material';
 
 import { login } from '@/app/actions/login';
-import { FormState } from '@/app/lib/client/definitions';
+import { LoginFormState } from '@/app/lib/client/definitions';
 
 import './style.css'
 
-const initialState: FormState = {
+const initialState: LoginFormState = {
   message: '',
   errors: {
     fieldErrors: {},

@@ -15,7 +15,7 @@
   padding: 24px;
   border-radius: 15px;
   box-shadow: 0 0 5px gray;
-  min-width: 400px;
+  max-width: 400px;
   position: relative;
   z-index: 2;
   background-color: white;

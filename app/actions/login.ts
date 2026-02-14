@@ -3,12 +3,12 @@ import z from 'zod';
 import { redirect } from 'next/navigation';
 
 import { LocalAPI } from '../lib/client/api';
-import { FormState, LoginFormSchema } from '../lib/client/definitions';
+import { LoginFormState, LoginFormSchema } from '../lib/client/definitions';
 
 export async function login(
-  state: FormState,
+  state: LoginFormState,
   formData: FormData,
-): Promise<FormState> {
+): Promise<LoginFormState> {
   const validateFields = LoginFormSchema.safeParse({
     username: formData.get('username'),
     password: formData.get('password'),

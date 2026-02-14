@@ -49,10 +49,14 @@ export async function createSession(username: string) {
 export async function validateSession() {
   const session = (await cookies()).get('session')?.value
 
+  if (!session) {
+    return false
+  }
+
   try {
     const payload = (await decrypt(session)) as SessionPayload
 
-    if (!session || !payload) {
+    if (!payload) {
       return false
     }
 
