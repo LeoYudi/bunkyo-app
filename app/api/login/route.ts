@@ -17,6 +17,13 @@ export async function POST(request: NextRequest) {
     username?: string;
     password?: string;
   };
+  // ✅ VALIDAÇÃO PRIMEIRO
+  if (!password || password.length < 8) {
+    return Response.json({
+      error: true,
+      message: "A senha deve ter no mínimo 8 caracteres",
+    });
+  }
 
   if (!username || !password) {
     return Response.json({
