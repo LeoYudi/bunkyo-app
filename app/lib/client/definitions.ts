@@ -1,4 +1,5 @@
 import * as z from 'zod';
+import dayjs, { Dayjs } from 'dayjs';
 
 export const LoginFormSchema = z.object({
   username: z.string().nonempty('Obrigatório'),
@@ -15,14 +16,24 @@ export type SessionPayload = {
   expiresAt: Date;
 };
 
+const isDayjs = (val: unknown): val is Dayjs => dayjs.isDayjs(val);
+const isFile = (val: unknown): val is File => val instanceof File;
+
 export const InvoiceFormSchema = z.object({
   senderName: z.string().nonempty('Obrigatório'),
   invoiceValue: z.string().nonempty('Obrigatório'),
-  invoiceDate: z.string().nonempty('Obrigatório'),
-  invoiceAttachment: z.any(),
-})
+  invoiceDate: z
+    .custom<Dayjs>(isDayjs, { message: 'Data inválida' })
+    .refine((d) => d.isValid(), 'Data inválida'),
+
+  invoiceAttachment: z
+    .custom<File>(isFile, { message: 'O anexo é obrigatório' })
+    .refine((file) => file.size > 0, 'Arquivo vazio'),
+});
+
+export type InvoiceFormType = z.infer<typeof InvoiceFormSchema>;
 
 export type InvoiceFormState = {
   errors?: z.ZodFlattenedError<z.infer<typeof InvoiceFormSchema>>;
   message?: string;
-}
+};

@@ -1,15 +1,17 @@
 'use client'
 
 import Image from 'next/image'
+import { Dayjs } from 'dayjs'
 import { CloudUpload } from '@mui/icons-material'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
-import { useActionState, useState } from 'react'
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers'
+import { useCallback, useTransition, useState } from 'react' // Added useCallback and useTransition
 import { Box, Button, FormGroup, TextField, Typography } from '@mui/material'
 
+import { useAlert } from '@/app/ui/AlertContextProvider'
 import { uploadInvoice } from '@/app/actions/invoice'
-import { InvoiceFormState } from '@/app/lib/client/definitions'
 import { MaskedTextField } from '../MaskedTextField'
+import { InvoiceFormState, InvoiceFormType } from '@/app/lib/client/definitions'
 
 import './style.css'
 
@@ -22,20 +24,47 @@ const initialState: InvoiceFormState = {
 }
 
 export function InvoiceComponent() {
-  const [formData, setFormData] = useState({
+  const { showNotification } = useAlert();
+  const [isPending, startTransition] = useTransition();
+  const [state, setState] = useState<InvoiceFormState>(initialState);
+
+  const [formData, setFormData] = useState<InvoiceFormType>({
     senderName: '',
     invoiceValue: '',
-    invoiceDate: '',
+    invoiceDate: null as Dayjs | null,
     invoiceAttachment: null as File | null
   })
 
-  const [state, action] = useActionState(uploadInvoice, initialState)
+  const handleSubmit = useCallback(async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setState(initialState);
 
+    startTransition(async () => {
+      const result = await uploadInvoice(initialState, formData);
+      setState(result);
+      console.log(result)
+      if (result?.message) {
+        const hasErrors = Object.keys(result.errors?.fieldErrors || {}).length > 0;
+
+        if (hasErrors) {
+          showNotification(result.message, 'error');
+        } else {
+          showNotification(result.message, 'success');
+          setFormData({
+            senderName: '',
+            invoiceValue: '',
+            invoiceDate: null,
+            invoiceAttachment: null
+          });
+        }
+      }
+    });
+  }, [formData, showNotification]);
   return (
     <Box className='invoice-page'>
       <Image src={'/login/background.jpg'} alt='Background' width={1000} height={1000} className='invoice-background-image' />
       <FormGroup className='invoice-box'>
-        <Box component='form' action={action} encType='multipart/form-data' suppressHydrationWarning={true}>
+        <Box component='form' onSubmit={handleSubmit} suppressHydrationWarning={true}>
           <Box className='invoice-title-container'>
             <Typography className='bold' variant='h5'>Enviar nota fiscal</Typography>
             <Typography variant='body2' color='textSecondary'>*A nota precisa ter sido emitida com o CNPJ do Bunkyo</Typography>
@@ -86,6 +115,8 @@ export function InvoiceComponent() {
                 name='invoiceDate'
                 label='Data da compra'
                 format='DD/MM/YYYY'
+                value={formData.invoiceDate}
+                onChange={(value) => { setFormData({ ...formData, invoiceDate: value }) }}
                 slotProps={{
                   textField: {
                     error: !!state?.errors?.fieldErrors?.invoiceDate,
@@ -101,6 +132,7 @@ export function InvoiceComponent() {
               variant="outlined"
               tabIndex={-1}
               startIcon={<CloudUpload />}
+              fullWidth
             >
               <Typography variant='button'>
                 {formData.invoiceAttachment ? formData.invoiceAttachment.name : 'Upload'}
@@ -108,7 +140,8 @@ export function InvoiceComponent() {
               <input
                 name='invoiceAttachment'
                 type='file'
-                style={{ display: "none" }}
+                capture='environment'
+                hidden
                 onChange={e => {
                   const file = e.target.files?.[0] || null;
                   setFormData({
@@ -119,7 +152,14 @@ export function InvoiceComponent() {
               ></input>
             </Button>
 
-            <Button type='submit' variant='contained'>
+            <Button
+              type='submit'
+              variant='contained'
+              loading={isPending}
+              disabled={
+                (formData.invoiceAttachment === null)
+                || isPending}
+            >
               <Typography variant='button'>Enviar</Typography>
             </Button>
           </Box>
