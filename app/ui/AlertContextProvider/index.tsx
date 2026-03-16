@@ -15,7 +15,6 @@ export const AlertContextProvider = ({ children }: { children: ReactNode }) => {
   const [severity, setSeverity] = useState<AlertColor>('info');
 
   const showNotification = (msg: string, sev: AlertColor = 'info') => {
-    console.log('Showing notification:', msg, 'with severity:', sev);
     setMessage(msg);
     setSeverity(sev);
     setOpen(true);

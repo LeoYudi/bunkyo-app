@@ -11,7 +11,7 @@ import { Box, Button, FormGroup, TextField, Typography } from '@mui/material'
 import { useAlert } from '@/app/ui/AlertContextProvider'
 import { uploadInvoice } from '@/app/actions/invoice'
 import { MaskedTextField } from '../MaskedTextField'
-import { InvoiceFormState, InvoiceFormType } from '@/app/lib/client/definitions'
+import { InvoiceFormState } from '@/app/lib/client/definitions'
 
 import './style.css'
 
@@ -28,11 +28,11 @@ export function InvoiceComponent() {
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<InvoiceFormState>(initialState);
 
-  const [formData, setFormData] = useState<InvoiceFormType>({
+  const [formData, setFormData] = useState({
     senderName: '',
     invoiceValue: '',
     invoiceDate: null as Dayjs | null,
-    invoiceAttachment: null as File | null
+    invoiceAttachment: null as File | null,
   })
 
   const handleSubmit = useCallback(async (event: React.FormEvent<HTMLFormElement>) => {
@@ -40,9 +40,13 @@ export function InvoiceComponent() {
     setState(initialState);
 
     startTransition(async () => {
-      const result = await uploadInvoice(initialState, formData);
+      const result = await uploadInvoice(initialState, {
+        senderName: formData.senderName,
+        invoiceValue: formData.invoiceValue,
+        invoiceDate: formData.invoiceDate,
+        invoiceAttachment: formData.invoiceAttachment,
+      });
       setState(result);
-      console.log(result)
       if (result?.message) {
         const hasErrors = Object.keys(result.errors?.fieldErrors || {}).length > 0;
 
@@ -99,7 +103,7 @@ export function InvoiceComponent() {
                 }
               }}
               unmask="typed"
-              value={formData.invoiceValue}
+              value={formData.invoiceValue || ''}
               onAccept={(value: number | string) => {
                 setFormData({
                   ...formData,

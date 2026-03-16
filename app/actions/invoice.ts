@@ -1,22 +1,13 @@
 import z from 'zod';
 
 import { LocalAPI } from '../lib/client/api';
-import {
-  InvoiceFormSchema,
-  InvoiceFormState,
-  InvoiceFormType,
-} from '../lib/client/definitions';
+import { InvoiceFormSchema, InvoiceFormState } from '../lib/client/definitions';
 
 export async function uploadInvoice(
   state: InvoiceFormState,
-  formData: InvoiceFormType,
+  formData: unknown,
 ): Promise<InvoiceFormState> {
-  const validateFields = InvoiceFormSchema.safeParse({
-    senderName: formData.senderName,
-    invoiceValue: formData.invoiceValue,
-    invoiceDate: formData.invoiceDate,
-    invoiceAttachment: formData.invoiceAttachment,
-  });
+  const validateFields = InvoiceFormSchema.safeParse(formData);
 
   if (!validateFields.success) {
     return { errors: z.flattenError(validateFields.error) };
