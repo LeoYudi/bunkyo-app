@@ -8,7 +8,7 @@ type RequestWithBodyArgs = {
 
 export class LocalAPI {
   static #defaultHeaders: HeadersInit = {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   };
 
   static async get({ path }: BaseRequestArgs) {
@@ -19,7 +19,7 @@ export class LocalAPI {
   static async post({ path, body }: RequestWithBodyArgs) {
     const response = await fetch(path, {
       headers: this.#defaultHeaders,
-      method: 'POST',
+      method: "POST",
       body,
     });
 
