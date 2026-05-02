@@ -1,17 +1,14 @@
 'use client'
 
 import Image from 'next/image'
-import { Dayjs } from 'dayjs'
 import { CloudUpload } from '@mui/icons-material'
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
-import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers'
-import { useCallback, useTransition, useState } from 'react' // Added useCallback and useTransition
+import { useCallback, useTransition, useState } from 'react'
 import { Box, Button, FormGroup, TextField, Typography } from '@mui/material'
 
 import { useAlert } from '@/app/ui/AlertContextProvider'
-import { uploadInvoice } from '@/app/actions/invoice'
-import { MaskedTextField } from '../MaskedTextField'
-import { InvoiceFormState } from '@/app/lib/client/definitions'
+import { ConfirmInvoiceModal } from '../ConfirmInvoiceModal'
+import { analyseInvoice, uploadInvoice } from '@/app/actions/invoice'
+import { InvoiceDataType, InvoiceFormState } from '@/app/lib/client/definitions'
 
 import './style.css'
 
@@ -27,11 +24,18 @@ export function InvoiceComponent() {
   const { showNotification } = useAlert();
   const [isPending, startTransition] = useTransition();
   const [state, setState] = useState<InvoiceFormState>(initialState);
+  const [open, setOpen] = useState(false);
+  const [invoiceData, setInvoiceData] = useState<InvoiceDataType>({
+    buyerTaxId: '',
+    receiptDate: '',
+    receiptNumber: '',
+    totalPrice: '',
+    vendorTaxId: '',
+    vendorName: '',
+  });
 
   const [formData, setFormData] = useState({
     senderName: '',
-    invoiceValue: '',
-    invoiceDate: null as Dayjs | null,
     invoiceAttachment: null as File | null,
   })
 
@@ -40,30 +44,47 @@ export function InvoiceComponent() {
     setState(initialState);
 
     startTransition(async () => {
-      const result = await uploadInvoice(initialState, {
+      const result = await analyseInvoice(initialState, {
         senderName: formData.senderName,
-        invoiceValue: formData.invoiceValue,
-        invoiceDate: formData.invoiceDate,
         invoiceAttachment: formData.invoiceAttachment,
       });
       setState(result);
       if (result?.message) {
-        const hasErrors = Object.keys(result.errors?.fieldErrors || {}).length > 0;
+        const hasErrors = Object.keys(result.errors?.fieldErrors || {}).length > 0 || Object.keys(result.errors?.formErrors || {}).length > 0;
 
         if (hasErrors) {
           showNotification(result.message, 'error');
+        } else if (!result.invoiceData) {
+          showNotification('Algo deu errado, tente novamente mais tarde', 'error');
         } else {
-          showNotification(result.message, 'success');
-          setFormData({
-            senderName: '',
-            invoiceValue: '',
-            invoiceDate: null,
-            invoiceAttachment: null
-          });
+          setInvoiceData(result.invoiceData);
+          setOpen(true);
         }
       }
     });
   }, [formData, showNotification]);
+
+  const handleConfirm = useCallback(async () => {
+    startTransition(async () => {
+      const result = await uploadInvoice(invoiceData, {
+        senderName: formData.senderName,
+        invoiceAttachment: formData.invoiceAttachment,
+      });
+      setState(result);
+      if (result?.message) {
+        const hasErrors = Object.keys(result.errors?.fieldErrors || {}).length > 0 || Object.keys(result.errors?.formErrors || {}).length > 0;
+
+        if (hasErrors) {
+          showNotification(result.message, 'error');
+        } else {
+          setFormData({ senderName: '', invoiceAttachment: null });
+          showNotification('Nota fiscal enviada com sucesso', 'success');
+          setOpen(false);
+        }
+      }
+    });
+  }, [formData, showNotification]);
+
   return (
     <Box className='invoice-page'>
       <Image src={'/login/background.jpg'} alt='Background' width={1000} height={1000} className='invoice-background-image' />
@@ -85,50 +106,6 @@ export function InvoiceComponent() {
               error={!!state?.errors?.fieldErrors?.senderName}
               helperText={state?.errors?.fieldErrors?.senderName}
             />
-
-            <MaskedTextField
-              name='invoiceValue'
-              type='text'
-              label='Valor da nota'
-              placeholder='R$ 0,00'
-              mask={'R$ num'}
-              blocks={{
-                num: {
-                  mask: Number,
-                  thousandsSeparator: '.',
-                  scale: 2,
-                  normalizeZeros: true,
-                  padFractionalZeros: true,
-                  radix: ',',
-                }
-              }}
-              unmask="typed"
-              value={formData.invoiceValue || ''}
-              onAccept={(value: number | string) => {
-                setFormData({
-                  ...formData,
-                  invoiceValue: value === '' ? '' : `${Number(value)}`,
-                })
-              }}
-              error={!!state?.errors?.fieldErrors?.invoiceValue}
-              helperText={state?.errors?.fieldErrors?.invoiceValue}
-            />
-
-            <LocalizationProvider dateAdapter={AdapterDayjs}>
-              <DatePicker
-                name='invoiceDate'
-                label='Data da compra'
-                format='DD/MM/YYYY'
-                value={formData.invoiceDate}
-                onChange={(value) => { setFormData({ ...formData, invoiceDate: value }) }}
-                slotProps={{
-                  textField: {
-                    error: !!state?.errors?.fieldErrors?.invoiceDate,
-                    helperText: state?.errors?.fieldErrors?.invoiceDate
-                  }
-                }}
-              />
-            </LocalizationProvider>
 
             <Button
               component="label"
@@ -152,6 +129,9 @@ export function InvoiceComponent() {
                     ...formData,
                     invoiceAttachment: file,
                   });
+
+                  e.target.files = null;
+                  e.target.value = '';
                 }}
               ></input>
             </Button>
@@ -169,6 +149,13 @@ export function InvoiceComponent() {
           </Box>
         </Box>
       </FormGroup>
-    </Box >
+      <ConfirmInvoiceModal
+        invoiceData={invoiceData}
+        open={open}
+        isLoading={isPending}
+        onClose={() => setOpen(false)}
+        onConfirm={handleConfirm}
+      />
+    </Box>
   )
 }

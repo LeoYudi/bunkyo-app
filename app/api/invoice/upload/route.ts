@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { validateSession } from '@/app/lib/server/session';
-import { getOrCreateFolder, uploadFile } from '@/app/lib/server/googleDrive';
+import { appendContentToSheet, getSheetContent } from '@/app/lib/server/googleSheets';
+import { getOrCreateFolder, getSheetFromFolder, uploadFile } from '@/app/lib/server/googleDrive';
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,15 +29,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to upload file" }, { status: 500 });
     }
 
+    const sheetId = await getSheetFromFolder(process.env.googleFolderId || '');
+
+    if (!sheetId) {
+      console.error("Template sheet not found");
+      return NextResponse.json({ error: "Sheet not found" }, { status: 500 });
+    }
+
     return NextResponse.json({
-      success: true,
-      fileId: response.id,
+      data: {
+        fileUrl: `https://drive.google.com/file/d/${response.id}`,
+      }
     }, { status: 200 });
 
   } catch (error) {
     console.error("Upload Error:", error);
     return NextResponse.json({
-      success: false,
       error: "Internal Server Error"
     }, { status: 500 });
   }

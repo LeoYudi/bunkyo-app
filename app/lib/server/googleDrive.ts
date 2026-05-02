@@ -1,19 +1,12 @@
 import { google } from 'googleapis';
 import { Readable } from 'stream';
 
-const auth = new google.auth.OAuth2({
-  clientId: process.env.googleClientId || '',
-  clientSecret: process.env.googleClientSecret || '',
-  redirectUri: process.env.googleRedirectUri || '',
-});
-
-auth.setCredentials({
-  refresh_token: process.env.googleRefreshToken || '',
-});
+import { auth } from './googleAuth';
 
 const FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder'
+const SPREADSHEET_MIME_TYPE = 'application/vnd.google-apps.spreadsheet'
 
-const drive = google.drive({ version: 'v3', auth });
+export const drive = google.drive({ version: 'v3', auth });
 
 export async function getOrCreateFolder(folderName: string, parentId?: string) {
   // 1. Build the query
@@ -68,4 +61,17 @@ export async function uploadFile(fileData: string, fileName: string, fileType: s
   });
 
   return response.data;
+}
+
+export async function getSheetFromFolder(folderId: string) {
+  const res = await drive.files.list({
+    q: `mimeType = '${SPREADSHEET_MIME_TYPE}' and name contains 'template' and trashed = false and '${folderId}' in parents`,
+    fields: 'files(id, name)',
+  });
+
+  if (!res.data.files?.length) {
+    return ''
+  }
+
+  return res.data.files[0]?.id || '';
 }
