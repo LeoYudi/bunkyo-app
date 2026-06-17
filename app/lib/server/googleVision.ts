@@ -8,60 +8,65 @@ const vision = google.vision({ version: 'v1', auth: auth });
 export async function analyseInvoice({ base64, mimeType }: { base64: string, mimeType: string }) {
     let response: any;
 
-    if (mimeType.includes('image')) {
-        response = await vision.images.annotate({
-            requestBody: {
-                requests: [
-                    {
-                        image: {
-                            content: base64
-                        },
-                        features: [
-                            {
-                                type: 'DOCUMENT_TEXT_DETECTION'
-                            }
-                        ]
-                    }
-                ]
-            }
-        })
-    }
-
-    if (mimeType.includes('pdf')) {
-        response = await vision.files.annotate({
-            requestBody: {
-                requests: [
-                    {
-                        inputConfig: {
-                            content: base64,
-                            mimeType: 'application/pdf',
-                        },
-                        features: [{ type: 'DOCUMENT_TEXT_DETECTION' }],
-                        // For synchronous calls, you can only request specific pages
-                        pages: [1, 2]
-                    }
-                ]
-            }
-        });
-    }
-
-    if (!response) {
-        throw new Error("Invalid mimeType")
+    try {
+        if (mimeType.includes('image')) {
+            response = await vision.images.annotate({
+                requestBody: {
+                    requests: [
+                        {
+                            image: {
+                                content: base64
+                            },
+                            features: [
+                                {
+                                    type: 'DOCUMENT_TEXT_DETECTION'
+                                }
+                            ]
+                        }
+                    ]
+                }
+            })
+        } else if (mimeType.includes('pdf')) {
+            response = await vision.files.annotate({
+                requestBody: {
+                    requests: [
+                        {
+                            inputConfig: {
+                                content: base64,
+                                mimeType: 'application/pdf',
+                            },
+                            features: [{ type: 'DOCUMENT_TEXT_DETECTION' }],
+                            // For synchronous calls, you can only request specific pages
+                            pages: [1, 2]
+                        }
+                    ]
+                }
+            });
+        } else {
+            throw new Error("Formato de arquivo não suportado. Use imagens ou PDF.");
+        }
+    } catch (error: unknown) {
+        console.error("Google Vision API Error:", error);
+        const message = error instanceof Error ? error.message : 'Erro desconhecido';
+        throw new Error(`Erro ao processar o arquivo (OCR): ${message}`);
     }
 
     if (!response.data.responses || !response.data.responses[0]) {
         console.error("Failed to get text from image:", JSON.stringify(response.data.responses));
-        throw new Error("Failed to get text from image")
+        throw new Error("Não foi possível extrair texto do arquivo.")
     }
 
     let fullText = "";
 
+    // Handle potential differences in response structure between images and files (PDFs)
     if (response.data.responses[0]?.responses) {
-        fullText = response.data.responses?.[0].responses?.[0].fullTextAnnotation?.text;
+        fullText = response.data.responses[0].responses[0].fullTextAnnotation?.text || "";
+    } else {
+        fullText = response.data.responses[0].fullTextAnnotation?.text || "";
     }
 
-    else {
-        fullText = response.data.responses[0].fullTextAnnotation?.text;
+    if (!fullText) {
+        throw new Error("Nenhum texto detectado na nota fiscal.");
     }
 
     return parseInvoiceWithAI(fullText);

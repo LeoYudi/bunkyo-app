@@ -16,7 +16,10 @@ export async function uploadInvoice(
 
   const file = validateFields.data.invoiceAttachment;
   const name = validateFields.data.senderName;
-  const day = dayjs(invoiceData.receiptDate).format('YYYYMMDD')
+  
+  const receiptDate = dayjs(invoiceData.receiptDate);
+  const validDate = receiptDate.isValid() ? receiptDate : dayjs();
+  const day = validDate.format('YYYYMMDD');
 
   const response = await LocalAPI.post({
     path: '/api/invoice/upload',
@@ -24,6 +27,7 @@ export async function uploadInvoice(
       fileData: Buffer.from(await file.arrayBuffer()).toString('base64'),
       fileName: `${day} - ${name} - R$ ${invoiceData.totalPrice}`,
       fileType: file.type,
+      invoiceData,
     }),
   });
 

@@ -83,7 +83,7 @@ export function InvoiceComponent() {
         }
       }
     });
-  }, [formData, showNotification]);
+  }, [formData, invoiceData, showNotification]);
 
   return (
     <Box className='invoice-page'>
